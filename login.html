@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>MTProto Login — получить session string</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --surface: #18181b;
+    --surface-2: #27272a;
+    --border: #3f3f46;
+    --text: #fafafa;
+    --muted: #a1a1aa;
+    --accent: #3b82f6;
+    --success: #10b981;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .container { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; font-size: 13px; }
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 12px;
+  }
+  .step.disabled { opacity: 0.4; pointer-events: none; }
+  .step-title {
+    font-weight: 600; font-size: 12px;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 12px;
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input {
+    width: 100%; padding: 10px 12px;
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    font-size: 14px; font-family: inherit;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  button {
+    width: 100%; padding: 11px 16px;
+    background: var(--accent); color: white;
+    border: none; border-radius: 6px;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    margin-top: 14px;
+  }
+  button:hover:not(:disabled) { opacity: 0.9; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+  .session-box {
+    background: var(--surface-2);
+    border: 1px solid var(--success);
+    border-radius: 6px; padding: 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px; word-break: break-all;
+    max-height: 200px; overflow: auto;
+    margin-top: 10px;
+  }
+  .log {
+    background: #000; color: #10b981;
+    border-radius: 6px; padding: 10px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px; max-height: 160px; overflow: auto;
+    margin-top: 12px; white-space: pre-wrap;
+  }
+  .log .err { color: var(--danger); }
+  .log .info { color: #60a5fa; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .badge {
+    display: inline-block;
+    background: var(--success); color: white;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px;
+    margin-left: 8px; vertical-align: middle;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔐 Получить MTProto session string</h1>
+  <p class="subtitle">
+    Войдите в Telegram-аккаунт один раз — получите длинную строку для воркера на Railway.
+    Данные отправляются только в Telegram, как при обычном входе.
+  </p>
+
+  <div class="step" id="step1">
+    <div class="step-title">Шаг 1 — API credentials</div>
+    <p class="hint">
+      ✅ <b>Уже заполнены публичными credentials Telegram Desktop</b> — можно ничего не менять и сразу нажать «Продолжить».
+      Если хотите свои — получите на <a href="https://my.telegram.org/auth" target="_blank">my.telegram.org</a> → API development tools и замените значения.
+    </p>
+    <label>api_id</label>
+    <input type="text" id="apiId" value="2040" placeholder="например 12345678" autocomplete="off" />
+    <label>api_hash</label>
+    <input type="text" id="apiHash" value="b18441a1ff607e10a989891a5462e627" placeholder="32-символьная строка" autocomplete="off" />
+    <button id="btn1">Продолжить →</button>
+  </div>
+
+  <div class="step disabled" id="step2">
+    <div class="step-title">Шаг 2 — Телефон</div>
+    <label>Номер в международном формате</label>
+    <input type="tel" id="phone" placeholder="+79991234567" autocomplete="off" />
+    <button id="btn2">Отправить код в Telegram</button>
+  </div>
+
+  <div class="step disabled" id="step3">
+    <div class="step-title">Шаг 3 — Код из Telegram</div>
+    <p class="hint">Telegram отправил код в одно из ваших устройств (приложение, не SMS).</p>
+    <label>Код</label>
+    <input type="text" id="code" placeholder="12345" autocomplete="one-time-code" />
+    <label>Облачный пароль 2FA <span style="color:var(--muted)">(если включён)</span></label>
+    <input type="password" id="password" placeholder="оставьте пустым если 2FA выключена" />
+    <button id="btn3">Войти</button>
+  </div>
+
+  <div class="step disabled" id="step4">
+    <div class="step-title">Готово <span class="badge">success</span></div>
+    <p class="hint">Скопируйте эту строку в переменную <code>MTPROTO_SESSION_STRING</code> на Railway:</p>
+    <div class="session-box" id="sessionBox"></div>
+    <button id="btnCopy" class="secondary">📋 Скопировать в буфер</button>
+    <p class="hint" style="margin-top:14px">
+      ⚠️ Это секрет — храните как пароль. Каждая новая генерация сбрасывает старую сессию.
+    </p>
+  </div>
+
+  <div class="log" id="log" style="display:none"></div>
+</div>
+
+<script type="module">
+const log = (msg, cls = '') => {
+  const el = document.getElementById('log');
+  el.style.display = 'block';
+  const span = document.createElement('div');
+  if (cls) span.className = cls;
+  span.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.appendChild(span);
+  el.scrollTop = el.scrollHeight;
+};
+
+const enable = (id) => document.getElementById(id).classList.remove('disabled');
+
+let TelegramClient, StringSession, Api, computeCheck;
+let client = null;
+let phoneCodeHash = null;
+
+log('Загружаю gramJS из CDN...', 'info');
+
+const pickConstructor = (mod, name) => {
+  const candidates = [
+    mod?.[name],
+    mod?.default?.[name],
+    mod?.[name]?.[name],
+    mod?.[name]?.default,
+    mod?.default?.default?.[name],
+  ];
+  return candidates.find((value) => typeof value === 'function');
+};
+
+try {
+  const mod = await import('https://esm.sh/telegram@2.26.16?bundle&target=es2022');
+  TelegramClient = pickConstructor(mod, 'TelegramClient');
+  Api = mod.Api || mod.default?.Api;
+  const sessionMod = await import('https://esm.sh/telegram@2.26.16/sessions/StringSession?bundle&target=es2022');
+  StringSession = pickConstructor(sessionMod, 'StringSession');
+  const passwordMod = await import('https://esm.sh/telegram@2.26.16/Password?bundle&target=es2022');
+  computeCheck = passwordMod.computeCheck || passwordMod.default?.computeCheck;
+  if (!TelegramClient || !StringSession || !Api || !computeCheck) {
+    throw new Error(`GramJS загрузился не полностью: TelegramClient=${typeof TelegramClient}, StringSession=${typeof StringSession}, Api=${typeof Api}, computeCheck=${typeof computeCheck}`);
+  }
+  log('✓ gramJS загружен', 'info');
+} catch (e) {
+  log('Ошибка загрузки gramJS: ' + e.message, 'err');
+  log('Попробуйте обновить страницу или открыть в Chrome/Firefox.', 'err');
+}
+
+document.getElementById('btn1').onclick = () => {
+  const apiId = document.getElementById('apiId').value.trim();
+  const apiHash = document.getElementById('apiHash').value.trim();
+  if (!apiId || !apiHash) return log('Заполните оба поля', 'err');
+  if (!/^\d+$/.test(apiId)) return log('api_id должен быть числом', 'err');
+  enable('step2');
+  log('✓ credentials сохранены', 'info');
+};
+
+document.getElementById('btn2').onclick = async () => {
+  const apiId = parseInt(document.getElementById('apiId').value.trim(), 10);
+  const apiHash = document.getElementById('apiHash').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  if (!phone.startsWith('+')) return log('Телефон должен начинаться с + и кода страны', 'err');
+
+  const btn = document.getElementById('btn2');
+  btn.disabled = true;
+  btn.textContent = 'Подключение к Telegram...';
+
+  try {
+    if (typeof StringSession !== 'function' || typeof TelegramClient !== 'function' || !Api) {
+      throw new Error('GramJS не загрузился. Обновите страницу без кэша: Ctrl+Shift+R.');
+    }
+
+    const session = new StringSession('');
+    client = new TelegramClient(session, apiId, apiHash, {
+      connectionRetries: 3,
+      useWSS: true,
+    });
+    log('Подключаюсь к серверам Telegram...', 'info');
+    await client.connect();
+    log('✓ подключено', 'info');
+
+    log(`Отправляю код на ${phone}...`, 'info');
+    const result = await client.invoke(
+      new Api.auth.SendCode({
+        phoneNumber: phone, apiId, apiHash,
+        settings: new Api.CodeSettings({}),
+      }),
+    );
+    phoneCodeHash = result.phoneCodeHash;
+    log('✓ код отправлен. Проверьте Telegram-приложение.', 'info');
+    enable('step3');
+    btn.textContent = 'Код отправлен ✓';
+  } catch (e) {
+    log('Ошибка: ' + (e.message || e), 'err');
+    btn.disabled = false;
+    btn.textContent = 'Повторить отправку';
+  }
+};
+
+document.getElementById('btn3').onclick = async () => {
+  const phone = document.getElementById('phone').value.trim();
+  const code = document.getElementById('code').value.trim();
+  const password = document.getElementById('password').value;
+  if (!code) return log('Введите код', 'err');
+
+  const btn = document.getElementById('btn3');
+  btn.disabled = true;
+  btn.textContent = 'Вход...';
+
+  try {
+    try {
+      await client.invoke(new Api.auth.SignIn({
+        phoneNumber: phone, phoneCodeHash, phoneCode: code,
+      }));
+      log('✓ авторизация успешна', 'info');
+    } catch (e) {
+      const msg = e.errorMessage || e.message || '';
+      if (msg.includes('SESSION_PASSWORD_NEEDED')) {
+        if (!password) {
+          log('У аккаунта 2FA — введите облачный пароль и нажмите ещё раз.', 'err');
+          btn.disabled = false;
+          btn.textContent = 'Войти';
+          return;
+        }
+        log('Подтверждаю облачным паролем...', 'info');
+        const passwordSrp = await client.invoke(new Api.account.GetPassword());
+        const check = await computeCheck(passwordSrp, password);
+        await client.invoke(new Api.auth.CheckPassword({ password: check }));
+        log('✓ 2FA принят', 'info');
+      } else throw e;
+    }
+
+    const sessionString = client.session.save();
+    document.getElementById('sessionBox').textContent = sessionString;
+    enable('step4');
+    btn.textContent = 'Готово ✓';
+    log('✓ session string сгенерирован', 'info');
+    await client.disconnect();
+  } catch (e) {
+    log('Ошибка входа: ' + (e.message || e), 'err');
+    btn.disabled = false;
+    btn.textContent = 'Войти';
+  }
+};
+
+document.getElementById('btnCopy').onclick = async () => {
+  const txt = document.getElementById('sessionBox').textContent;
+  try {
+    await navigator.clipboard.writeText(txt);
+    document.getElementById('btnCopy').textContent = '✓ Скопировано!';
+    setTimeout(() => {
+      document.getElementById('btnCopy').textContent = '📋 Скопировать в буфер';
+    }, 2000);
+  } catch {
+    log('Не удалось скопировать — выделите вручную', 'err');
+  }
+};
+</script>
+</body>
+</html>

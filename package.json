@@ -1,0 +1,16 @@
+{
+  "name": "mtproto-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MTProto Telegram discovery worker (single-file, no folders).",
+  "scripts": {
+    "start": "node worker.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.95.0",
+    "telegram": "^2.26.16"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
