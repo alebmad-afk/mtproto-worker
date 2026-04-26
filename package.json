@@ -2,13 +2,23 @@
   "name": "mtproto-worker",
   "version": "0.1.0",
   "private": true,
-  "description": "MTProto Telegram discovery worker (single-file, no folders).",
+  "type": "module",
+  "description": "MTProto-based Telegram discovery worker for Lovable Cloud",
   "scripts": {
-    "start": "node worker.js"
+    "start": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "login": "tsx scripts/login.ts",
+    "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.0",
+    "input": "^1.0.1",
     "telegram": "^2.26.16"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
   },
   "engines": {
     "node": ">=20.0.0"

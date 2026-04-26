@@ -2,12 +2,19 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install deps from the flat package.json
+# Install dependencies first (cache layer)
 COPY package.json ./
 RUN npm install --omit=dev && npm cache clean --force
 
-# Copy the single worker file (no folders required)
-COPY worker.js ./
+# Copy sources
+COPY tsconfig.json ./
+COPY src ./src
+COPY scripts ./scripts
 
+# Install tsx globally for runtime TS execution
+RUN npm install -g tsx
+
+# Healthcheck endpoint is optional; worker is long-running
 ENV NODE_ENV=production
-CMD ["node", "worker.js"]
+
+CMD ["tsx", "src/index.ts"]
