@@ -13,10 +13,12 @@
 
 const { createClient } = require("@supabase/supabase-js");
 const { TelegramClient, Api } = require("telegram");
+const { ConnectionTCPObfuscated } = require("telegram/network");
+const { PromisedNetSockets, PromisedWebSockets } = require("telegram/extensions");
 const { StringSession } = require("telegram/sessions");
 const { FloodWaitError } = require("telegram/errors");
 
-const WORKER_VERSION = "0.1.0-flat";
+const WORKER_VERSION = "0.1.1-flat";
 
 // ---------- env ----------
 function req(name) {
@@ -231,9 +233,17 @@ async function insertDiscoveryCandidates(discoveryQueryId, candidates) {
 
 // ---------- telegram ----------
 const session = new StringSession(env.MTPROTO_SESSION_STRING);
+const serverAddress = session.serverAddress || "";
+const isBrowserWebSession = /\.web\.telegram\.org$/i.test(serverAddress);
 const tg = new TelegramClient(session, env.MTPROTO_API_ID, env.MTPROTO_API_HASH, {
-  connectionRetries: 5,
-  useWSS: false,
+  connection: ConnectionTCPObfuscated,
+  networkSocket: isBrowserWebSession ? PromisedWebSockets : PromisedNetSockets,
+  connectionRetries: 10,
+  reconnectRetries: 10,
+  requestRetries: 3,
+  retryDelay: 2000,
+  timeout: 30,
+  useWSS: isBrowserWebSession,
   autoReconnect: true,
 });
 let tgConnected = false;
